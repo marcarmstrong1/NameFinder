@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification, pipelin
 import pandas as pd
 import easygui
 
-df = pd.read_csv(easygui.fileopenbox())
+df = pd.read_csv("input.csv")
 df["ACTUAL REVIEW"].dropna(inplace = True)
 
 df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
@@ -55,6 +55,8 @@ for comment in df["ACTUAL REVIEW"]:
     
 y.set_index("Index", inplace = True)
 y['Name'] = [','.join(map(str, l)) for l in y['Name']]
+df = df.reset_index()
+df.to_excel("premerge.xlsx")
 df = df.merge(y, how = "left", left_index = True, right_index = True)
 df["Name"] = df["Name"].fillna("0")
 df = df.groupby(['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"])['Name'].apply(', '.join).reset_index()
@@ -63,3 +65,4 @@ for x in range(len(df["Name"])):
     df["Name"][x] = df["Name"][x].replace(", ##", "")
 
 df.to_excel("output.xlsx")
+y.to_excel("names.xlsx")
