@@ -67,6 +67,6 @@ if data is not None:
     st.download_button(
             label="Download the output file", 
             data=convert_df_to_csv(df), 
-            file_name="output.xlsx",
+            file_name="output.csv",
             mime="text/csv"
     )
