@@ -47,7 +47,7 @@ if data is not None:
         for name_list in all_names_list_tmp:
             full_name = ' '.join(name_list[0]).replace(' ##', '').replace(' .', '.')
             final_name_list.append([full_name])
-            y = y.append({"Name" : [full_name], "Index" : count}, ignore_index = True)
+            y = y._append({"Name" : [full_name], "Index" : count}, ignore_index = True)
     
         count = count + 1
     
