@@ -10,7 +10,7 @@ data = st.file_uploader("Upload a CSV file", type=["csv"])
 
 if data is not None:
     df = pd.read_csv(data)
-    df["ACTUAL REVIEW"].dropna(inplace = True)
+    df.dropna(subset=["ACTUAL REVIEW"], inplace=True)
 
     df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
     df = df[df["STAR RATING"] >= int(rating)]
