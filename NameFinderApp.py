@@ -13,12 +13,16 @@ if data is not None:
     df["ACTUAL REVIEW"].dropna(inplace = True)
 
     df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
-    df = df[df["STAR RATING"] > rating]
+    df = df[df["STAR RATING"] >= rating]
+    
+    @st.cache
+    def load_model():
+        bert_tokenizer = AutoTokenizer.from_pretrained('dslim/bert-large-NER')
+        bert_model = AutoModelForTokenClassification.from_pretrained('dslim/bert-large-NER')
+        nlp_f = pipeline('ner', model=bert_model, tokenizer=bert_tokenizer)
+        return nlp_f
 
-    bert_tokenizer = AutoTokenizer.from_pretrained('dslim/bert-large-NER')
-    bert_model = AutoModelForTokenClassification.from_pretrained('dslim/bert-large-NER')
-
-    nlp = pipeline('ner', model=bert_model, tokenizer=bert_tokenizer)
+    nlp = load_model()
 
     count = 0
     y = pd.DataFrame(columns = ["Name", "Index"])
