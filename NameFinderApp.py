@@ -13,7 +13,7 @@ if data is not None:
     df["ACTUAL REVIEW"].dropna(inplace = True)
 
     df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
-    df = df[df["STAR RATING"] >= rating]
+    df = df[df["STAR RATING"] >= int(rating)]
     
     @st.cache(allow_output_mutation=True)
     def load_model():
