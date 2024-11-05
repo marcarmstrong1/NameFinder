@@ -9,7 +9,7 @@ rating = st.slider("Select a rating (Ex. 4 would mean 4 stars and up)", 1, 5)
 data = st.file_uploader("Upload a XLSX file", type=["xlsx"])
 
 if data is not None:
-    df = pd.read_csv(data)
+    df = pd.read_excel(data)
     df.dropna(subset=["ACTUAL REVIEW"], inplace=True)
 
     df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
