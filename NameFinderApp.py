@@ -6,7 +6,7 @@ st.title("A helpful tool to find names within reviews")
 
 rating = st.slider("Select a rating (Ex. 4 would mean 4 stars and up)", 1, 5)
 
-data = st.file_uploader("Upload a CSV file", type=["csv"])
+data = st.file_uploader("Upload a XLSX file", type=["xlsx"])
 
 if data is not None:
     df = pd.read_csv(data)
@@ -22,54 +22,74 @@ if data is not None:
         return(pipeline('ner', model=bert_model, tokenizer=bert_tokenizer))
 
     nlp = load_model()
-
-    count = 0
-    y = pd.DataFrame(columns = ["Name", "Index"])
-
-    for comment in df["ACTUAL REVIEW"]:
-        names_string = comment
-        ner_list = nlp(names_string)
     
-        this_name = []
-        all_names_list_tmp = []
-    
+    def extract_names(comment):
+        """Extracts names from a text using a pre-trained NER model."""
+        ner_list = nlp(comment)
+        names = []
+        current_name = []
         for ner_dict in ner_list:
             if ner_dict['entity'] == 'B-PER':
-                if len(this_name) == 0:
-                    this_name.append(ner_dict['word'])
-                else:
-                    all_names_list_tmp.append([this_name])
-                    this_name = []
-                    this_name.append(ner_dict['word'])
+                if current_name:
+                    names.append(' '.join(current_name).replace(' ##', '').replace(' .', '.'))
+                current_name = [ner_dict['word']]
             elif ner_dict['entity'] == 'I-PER':
-                this_name.append(ner_dict['word'])
+                current_name.append(ner_dict['word'])
+        if current_name:
+            names.append(' '.join(current_name).replace(' ##', '').replace(' .', '.'))
+        return names
     
-        all_names_list_tmp.append([this_name])
-    
-        final_name_list = []
-        for name_list in all_names_list_tmp:
-            full_name = ' '.join(name_list[0]).replace(' ##', '').replace(' .', '.')
-            final_name_list.append([full_name])
-            y = y._append({"Name" : [full_name], "Index" : count}, ignore_index = True)
-    
-        count = count + 1
-    
-    y.set_index("Index", inplace = True)
-    y['Name'] = [','.join(map(str, l)) for l in y['Name']]
-    df = df.reset_index()
-    df = df.merge(y, how = "left", left_index = True, right_index = True)
-    df["Name"] = df["Name"].fillna("0")
-    df = df.groupby(['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"])['Name'].apply(', '.join).reset_index()
+    # Apply the name extraction function
+    df['Names'] = df['ACTUAL REVIEW'].apply(extract_names)
 
-    for x in range(len(df["Name"])):
-        df["Name"][x] = df["Name"][x].replace(", ##", "")
+    # Explode the list of names into separate rows
+    df = df.explode('Names')
+
+    #Remove rows where Names is empty string or NaN
+    df = df.dropna(subset=['Names'])
+    df = df[df['Names'] != ""]
+
+    def fix_broken_names(df):
+        new_rows = []
+        prev_row = None  # Store the previous row
+
+        for _, row in df.iterrows():
+            name = row["Names"]
+            if name.startswith("##"):
+                if prev_row is not None:  # Ensure there's a previous row
+                    combined_name = prev_row["Names"] + name[2:]
+                    new_row = prev_row.copy()
+                    new_row["Names"] = combined_name
+                    new_rows.append(new_row)
+                    prev_row = None  # Clear the previous row
+            else:
+                if prev_row is not None:
+                    new_rows.append(prev_row)
+                prev_row = row.copy()  # Store the current row as the previous
+
+        if prev_row is not None:  # Append the last row if it wasn't used
+            new_rows.append(prev_row)
+
+        return pd.DataFrame(new_rows)
+
+    fixed_df = fix_broken_names(df)
+
+    # Group by property and name, calculate average star rating
+    grouped = fixed_df.groupby(['PROPERTY NAME', 'Names'])['STAR RATING'].agg(['mean', 'count']).reset_index()
+    grouped = grouped.rename(columns={'mean': 'Average Star Rating', 'count': 'Review Count'})
 
     def convert_df_to_csv(df):
         return df.to_csv().encode('utf-8')
 
     st.download_button(
-            label="Download the output file", 
-            data=convert_df_to_csv(df), 
-            file_name="output.csv",
+            label="Download the Raw output file", 
+            data=convert_df_to_csv(fixed_df), 
+            file_name="raw.csv",
+            mime="text/csv"
+    )
+    st.download_button(
+            label="Download the analysis file", 
+            data=convert_df_to_csv(grouped), 
+            file_name="analysis.csv",
             mime="text/csv"
     )
