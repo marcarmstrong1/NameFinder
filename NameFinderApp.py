@@ -12,7 +12,7 @@ if data is not None:
     df = pd.read_excel(data)
     df.dropna(subset=["ACTUAL REVIEW"], inplace=True)
 
-    df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING"]]
+    df = df[['DATE','PROPERTY NAME','ACTUAL REVIEW', "STAR RATING", "REVIEWID"]]
     df = df[df["STAR RATING"] >= int(rating)]
     
     @st.cache(allow_output_mutation=True)
@@ -44,6 +44,8 @@ if data is not None:
 
     # Explode the list of names into separate rows
     df = df.explode('Names')
+    df = df.drop_duplicates()
+    df = df.drop("REVIEWID", axis = 1)
 
     #Remove rows where Names is empty string or NaN
     df = df.dropna(subset=['Names'])
